@@ -3,6 +3,7 @@ import { config } from '../Model/index.js'
 import { setMap } from './admin/setting.js'
 import { List, Token, QRLogin } from './admin/account.js'
 import { ImageLength, Setting, filterLog, turn_filter_bot } from './admin/setting.js'
+import { ImageHost, ImageHostSet } from './admin/imageHost.js'
 import { DAUStat, callStat, userStat } from './admin/stats.js'
 import { Markdown } from './markdown.js'
 import { refConfig, oneKeySendGroupMsg } from './tools.js'
@@ -43,6 +44,16 @@ export class QQBotAdapter extends plugin {
           reg: "^#[Qq]+[Bb]ot图片限制[0-9]+$",
           fnc: "ImageLength",
           permission: config.permission,
+        },
+        {
+          reg: /^#[Qq]+[Bb]ot图床设置\S+:\S*:\S*:\S*(:.*)?$/i,
+          fnc: 'ImageHostSet',
+          permission: config.permission
+        },
+        {
+          reg: /^#[Qq]+[Bb]ot图床$/i,
+          fnc: 'ImageHost',
+          permission: config.permission
         },
         {
           reg: new RegExp(`^#[Qq]+[Bb]ot设置(${Object.keys(setMap).join('|')})\\s*(开启|关闭)$`, 'i'),
@@ -117,6 +128,8 @@ QQBotAdapter.prototype.List = List
 QQBotAdapter.prototype.Token = Token
 QQBotAdapter.prototype.QRLogin = QRLogin
 QQBotAdapter.prototype.ImageLength = ImageLength
+QQBotAdapter.prototype.ImageHost = ImageHost
+QQBotAdapter.prototype.ImageHostSet = ImageHostSet
 QQBotAdapter.prototype.Setting = Setting
 QQBotAdapter.prototype.filterLog = filterLog
 QQBotAdapter.prototype.turn_filter_bot = turn_filter_bot

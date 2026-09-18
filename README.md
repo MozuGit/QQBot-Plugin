@@ -172,6 +172,8 @@ components/
 ├── image.js           # 图片
 ├── claw.js            # 龙虾配置
 └── config.js          # 配置助手
+utils/
+└── cos.js             # 腾讯云COS图床（签名/上传/配置校验）
 model/
 ├── sdkEnhancer.js     # SDK增强
 ├── config.js          # YAML配置
@@ -221,6 +223,49 @@ model/
 - MD消息模式：使用内置图床发送图片
 - 切换普通消息，输入 `#QQBotMD机器人QQ号:legacy`
 
+## 配置图床
+
+MD消息模式下的图片会按 `腾讯云COS → 适配器上传 → 本地链接` 的顺序上传，前两者都失败才会回退。默认使用腾讯云官方演示桶（无需配置，但可能随时失效），**推荐换成自己的 COS 存储桶**。
+
+### 聊天命令配置（推荐）
+
+```
+#QQBot图床设置SecretId:SecretKey:存储桶:地域:前缀
+```
+
+示例：
+
+```
+#QQBot图床设置AKIDxxxxxxxxxxxxxxxx:xxxxxxxxxxxxxxxx:mybucket-1250000000:ap-guangzhou:QQBot
+```
+
+- `存储桶` 形如 `mybucket-1250000000`（必须带 APPID 后缀），`地域` 形如 `ap-guangzhou`
+- `前缀` 可留空；用 `-` 表示清空；只允许字母、数字、`. _ - /`
+- `SecretKey` 处填 `****` 表示不修改已保存的密钥，避免脱敏值覆盖真实密钥
+- 保存前会真实上传一张 1×1 测试图，成功才写入配置，并返回测试图链接便于验证
+- `#QQBot图床` 查看当前配置（密钥脱敏显示）与生效状态
+
+### 配置文件配置
+
+`config/QQBot.yaml`：
+
+```yml
+tencentCOS:
+  secretId: AKIDxxxxxxxxxxxxxxxx
+  secretKey: xxxxxxxxxxxxxxxx
+  bucket: mybucket-1250000000
+  region: ap-guangzhou
+  keyPrefix: QQBot          # 可选，对象前缀
+  endpoint: ''              # 可选，自定义上传域名，默认 https://{bucket}.cos.{region}.myqcloud.com
+  bucketUrl: ''             # 可选，自定义访问域名/CDN，不填则用默认域名
+  contentType: ''           # 可选，强制 Content-Type，默认按图片后缀推断
+```
+
+- `tencentCOS: false` 可完全关闭图床，直接走适配器上传或本地链接
+- `secretId`/`secretKey`/`bucket`/`region` 四项留空则回退官方演示桶
+- 建议使用子账号密钥，仅授予该存储桶的写入权限；存储桶读权限设为「公有读私有写」图片才能被 QQ 拉取
+- 对象键形如 `QQBot/1712345678-<uuid>.png`，时间戳+UUID 保证唯一，不会覆盖旧图
+
 ## 使用教程
 
 ### 账号管理
@@ -233,6 +278,8 @@ model/
 - `#QQBotMD114:legacy` — 普通消息模式
 - `#QQBotMD114:1909831031_980983013` — 设置Markdown模板ID
 - `#QQBot图片限制3` — 限制图片大小（MB）
+- `#QQBot图床` — 查看图床配置与生效状态
+- `#QQBot图床设置SecretId:SecretKey:存储桶:地域:前缀` — 配置腾讯云 COS 图床（见上方「配置图床」）
 
 ### 功能开关
 - `#QQBot设置二维码 开启/关闭` — 链接转二维码

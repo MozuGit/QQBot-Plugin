@@ -13,7 +13,7 @@ export function initSharp(val) { sharp = val }
 export function initMarkdownTemplate(val) { markdown_template = val }
 export function initTmplPkg(val) { TmplPkg = val }
 
-export const PER_BOT_CONFIG_KEYS = ['toQRCode', 'toCallback', 'toBotUpload', 'forceSilk', 'toQQUin', 'toImg', 'callStats', 'userStats']
+export const PER_BOT_CONFIG_KEYS = ['toQRCode', 'toCallback', 'toBotUpload', 'forceSilk', 'toQQUin', 'toImg', 'callStats', 'userStats', 'tencentCOS']
 
 export const CLAW_DEFAULT_CFG = {
   channel_type: 'qqbot',

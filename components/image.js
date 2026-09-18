@@ -4,6 +4,8 @@ import fetch from 'node-fetch'
 import { config, Handler } from '../Model/index.js'
 import { URL_REGEXP_FULL, sharp } from '../utils/constants.js'
 import { pickImageSizeOptions } from '../utils/helpers.js'
+import { hasCustomCOS, putCOSObject, resolveCOSConfig } from '../utils/cos.js'
+import { getBotConfigValue } from './config.js'
 import { makeButtons } from './button.js'
 
 async function makeQRCode(adapter, data) {
@@ -40,9 +42,32 @@ async function makeBotImage(adapter, file) {
   }
 }
 
-async function uploadToTencentCOS(adapter, buffer) {
+function getCOSConfig(adapter, selfId = '') {
+  return resolveCOSConfig(getBotConfigValue(adapter, selfId, 'tencentCOS'))
+}
+
+/**
+ * 腾讯云 COS 图床
+ * - config.tencentCOS 配好 secretId/secretKey/bucket/region 时，直传自己的存储桶（官方签名鉴权）
+ * - 未配置时回退到官方演示桶上传凭证（无需配置，但可能随时失效）
+ * - 置为 false 可完全关闭图床，走适配器上传 / 本地链接
+ */
+async function uploadToTencentCOS(adapter, buffer, file, selfId = '') {
+  const cos = getCOSConfig(adapter, selfId)
+  if (!cos && !getBotConfigValue(adapter, selfId, 'tencentCOS')) return null
+
+  if (hasCustomCOS(cos)) {
+    try {
+      const { url, key } = await putCOSObject(cos, buffer, { file })
+      Bot.makeLog('debug', ['腾讯 COS 上传成功', url], selfId)
+      return { success: true, url, key }
+    } catch (err) {
+      Bot.makeLog('error', ['腾讯 COS 上传失败', err.message], selfId)
+      return { success: false, error: err.message }
+    }
+  }
+
   try {
-    if (!config.tencentCOS) return null
     const fetchImpl = typeof fetch !== 'undefined' ? fetch : await import('node-fetch').then(module => module.default);
     const getResponse = await fetchImpl(`https://ci-exhibition.cloud.tencent.com/samples/createUploadKey?ext=png&ciProcess=sensitive-content-recognition`, {
       method: 'GET',
@@ -104,7 +129,7 @@ async function uploadToTencentCOS(adapter, buffer) {
 async function makeMarkdownImage(adapter, data, file, summary = '图片', options = {}) {
   const buffer = await Bot.Buffer(file)
   const image =
-    await uploadToTencentCOS(adapter, buffer) ||
+    await uploadToTencentCOS(adapter, buffer, file, data.self_id) ||
     await makeBotImage(adapter, buffer) ||
     { url: await Bot.fileToUrl(file) }
 
@@ -187,7 +212,9 @@ export function installImage(adapter) {
   adapter.makeQRCode = (data) => makeQRCode(adapter, data)
   adapter.makeRawMarkdownText = (data, text, button) => makeRawMarkdownText(adapter, data, text, button)
   adapter.makeBotImage = (file) => makeBotImage(adapter, file)
-  adapter.uploadToTencentCOS = (buffer) => uploadToTencentCOS(adapter, buffer)
+  adapter.getCOSConfig = (selfId) => getCOSConfig(adapter, selfId)
+  adapter.hasCustomCOS = (selfId) => hasCustomCOS(getCOSConfig(adapter, selfId))
+  adapter.uploadToTencentCOS = (buffer, file, selfId) => uploadToTencentCOS(adapter, buffer, file, selfId)
   adapter.makeMarkdownImage = (data, file, summary, options) => makeMarkdownImage(adapter, data, file, summary, options)
   adapter.compressImage = (data, file) => compressImage(adapter, data, file)
 }
@@ -196,6 +223,8 @@ export {
   makeQRCode,
   makeRawMarkdownText,
   makeBotImage,
+  getCOSConfig,
+  hasCustomCOS,
   uploadToTencentCOS,
   makeMarkdownImage,
   compressImage

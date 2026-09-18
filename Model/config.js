@@ -16,7 +16,16 @@ let { config, configSave } = await makeConfig('QQBot', {
   imageLength: 3,
   toQQUin: false,
   toImg: false,
-  tencentCOS: true,
+  tencentCOS: {
+    secretId: '',    // 腾讯云 API 密钥 SecretId
+    secretKey: '',   // 腾讯云 API 密钥 SecretKey
+    bucket: '',      // 存储桶名，如 mybucket-1250000000
+    region: '',      // 存储桶地域，如 ap-guangzhou
+    keyPrefix: '',   // 对象前缀（可选），如 QQBot
+    endpoint: '',    // 自定义上传域名（可选），默认 https://{bucket}.cos.{region}.myqcloud.com
+    bucketUrl: '',   // 自定义访问域名/CDN（可选），不填则用默认域名
+    contentType: ''  // 强制上传 Content-Type（可选），默认按文件后缀推断
+  },                 // 四项必填项留空时回退到官方演示桶（见 README）；填 false 可完全关闭图床
   callStats: false,
   userStats: false,
   markdown: {
